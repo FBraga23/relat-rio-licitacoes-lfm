@@ -35,10 +35,10 @@ jobs:
 
     steps:
       - name: Baixar codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configurar Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -51,7 +51,7 @@ jobs:
 
       - name: Restaurar snapshot PNCP mais recente
         id: restore-pncp
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: cache/pncp_complementos.json
           key: pncp-snapshot-report-${{ github.run_id }}
@@ -68,7 +68,7 @@ jobs:
 
       - name: Guardar PDF e logs para diagnostico
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: relatorio-uasg-765741-${{ github.run_id }}
           path: |
