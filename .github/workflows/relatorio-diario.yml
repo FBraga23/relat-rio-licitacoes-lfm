@@ -1,0 +1,78 @@
+name: Relatorio Diario - 08h
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+      timezone: "America/Sao_Paulo"
+  workflow_dispatch:
+    inputs:
+      sem_email:
+        description: "Gerar o PDF sem enviar e-mail"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compras-765741-relatorio
+  cancel-in-progress: false
+
+jobs:
+  relatorio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      SMTP_USUARIO: ${{ secrets.SMTP_USUARIO }}
+      SMTP_REMETENTE: ${{ secrets.SMTP_REMETENTE }}
+      SMTP_NOME_REMETENTE: ${{ secrets.SMTP_NOME_REMETENTE }}
+      SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+      DESTINATARIOS: ${{ secrets.DESTINATARIOS }}
+      CC: ${{ secrets.CC }}
+      BCC: ${{ secrets.BCC }}
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: python -m pip install -r requirements.txt
+
+      - name: Criar config.json a partir dos Secrets
+        run: python github_prepare_config.py
+
+      - name: Restaurar snapshot PNCP mais recente
+        id: restore-pncp
+        uses: actions/cache/restore@v4
+        with:
+          path: cache/pncp_complementos.json
+          key: pncp-snapshot-report-${{ github.run_id }}
+          restore-keys: |
+            pncp-snapshot-
+
+      - name: Gerar relatorio sem enviar e-mail
+        if: github.event_name == 'workflow_dispatch' && inputs.sem_email == true
+        run: python run_daily.py --sem-email
+
+      - name: Gerar e enviar relatorio
+        if: github.event_name != 'workflow_dispatch' || inputs.sem_email != true
+        run: python run_daily.py
+
+      - name: Guardar PDF e logs para diagnostico
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-uasg-765741-${{ github.run_id }}
+          path: |
+            output/*.pdf
+            logs/*.log
+          if-no-files-found: ignore
+          retention-days: 7
