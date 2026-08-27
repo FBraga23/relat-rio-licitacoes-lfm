@@ -23,11 +23,12 @@
   "pncp_espera_base_segundos": 4,
   "pncp_cache_path": "cache/pncp_complementos.json",
   "pncp_cache_max_age_hours": 24,
-  "pncp_snapshot_tentativas": 3,
-  "pncp_snapshot_espera_base_segundos": 4,
-  "pncp_snapshot_timeout_leitura_segundos": 20,
+  "pncp_snapshot_tentativas": 1,
+  "pncp_snapshot_espera_base_segundos": 6,
+  "pncp_snapshot_timeout_leitura_segundos": 25,
   "hora_snapshot_pncp": 1,
   "minuto_snapshot_pncp": 0,
   "hora_relatorio": 8,
-  "minuto_relatorio": 0
+  "minuto_relatorio": 0,
+  "pncp_snapshot_cache_fresh_hours": 6
 }

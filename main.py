@@ -1128,6 +1128,7 @@ def atualizar_snapshot_pncp(
     tentativas_pncp: int = 3,
     espera_base_pncp: float = 4.0,
     timeout_leitura: float = 20.0,
+    cache_fresh_hours: float = 6.0,
 ) -> tuple[int, list[str]]:
     """Pré-coleta os quatro complementos essenciais do PNCP e os salva no cache.
 
@@ -1177,6 +1178,27 @@ def atualizar_snapshot_pncp(
         )
 
     for chave, descricao, consulta in consultas:
+        # As execucoes noturnas sao cumulativas. Se este recorte ja foi obtido
+        # com sucesso nas ultimas horas, nao o consulta novamente. Isso reduz
+        # carga no PNCP e evita 429 quando uma rodada posterior tenta apenas
+        # completar os recortes que faltaram na rodada anterior.
+        existente = carregar_entrada_recente(
+            cache_pncp_path,
+            chave,
+            agora,
+            max_age_hours=max(0.0, float(cache_fresh_hours)),
+        )
+        if existente is not None:
+            registros_existentes, salvo_em = existente
+            atualizadas += 1
+            logging.info(
+                "%s ja possui snapshot recente de %s (%d registro(s)); mantendo cache e pulando nova consulta.",
+                descricao,
+                salvo_em.astimezone(FUSO_BRASILIA).strftime("%d/%m/%Y %H:%M"),
+                len(registros_existentes),
+            )
+            continue
+
         try:
             registros = executar_com_retentativas(
                 descricao,

@@ -84,6 +84,7 @@ def main() -> int:
         ),
     )
     timeout_leitura = max(5.0, float(config.get("pncp_snapshot_timeout_leitura_segundos", 20)))
+    cache_fresh_hours = max(0.0, float(config.get("pncp_snapshot_cache_fresh_hours", 6)))
 
     logging.info(
         "Iniciando pre-coleta PNCP de madrugada | cache=%s | periodo-base=%s a %s",
@@ -99,15 +100,20 @@ def main() -> int:
         tentativas_pncp=tentativas,
         espera_base_pncp=espera,
         timeout_leitura=timeout_leitura,
+        cache_fresh_hours=cache_fresh_hours,
     )
 
     if falhas:
-        logging.error(
-            "Snapshot PNCP concluido parcialmente: %d/4 recortes atualizados. Falhas: %s",
+        logging.warning(
+            "Snapshot PNCP concluido parcialmente: %d/4 recortes validos nesta janela. Falhas: %s",
             atualizadas,
             "; ".join(falhas),
         )
-        return 4
+        # A pre-coleta noturna possui varias rodadas. Um resultado parcial nao
+        # derruba o job: o cache parcial e preservado e a proxima rodada tenta
+        # somente os recortes faltantes. A rotina das 08h continua sendo o
+        # gate final de integridade e bloqueia o e-mail se o cache nao fechar 4/4.
+        return 0
 
     logging.info("Snapshot PNCP concluido com sucesso: 4/4 recortes atualizados.")
     return 0
