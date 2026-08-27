@@ -1,8 +1,14 @@
-name: Snapshot PNCP - 01h
+name: Snapshot PNCP - Madrugada
 
 on:
   schedule:
-    - cron: "0 1 * * *"
+    # Rodadas escalonadas e fora do minuto 00. Cada rodada reaproveita o cache
+    # anterior e consulta apenas os recortes ainda ausentes/reprovados.
+    - cron: "37 0 * * *"
+      timezone: "America/Sao_Paulo"
+    - cron: "17 1 * * *"
+      timezone: "America/Sao_Paulo"
+    - cron: "7 2 * * *"
       timezone: "America/Sao_Paulo"
   workflow_dispatch:
 
@@ -16,7 +22,7 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - name: Baixar codigo
@@ -44,8 +50,6 @@ jobs:
             pncp-snapshot-
 
       - name: Atualizar snapshot PNCP
-        id: snapshot
-        continue-on-error: true
         run: python snapshot_pncp.py
 
       - name: Salvar snapshot PNCP
@@ -55,9 +59,9 @@ jobs:
           path: cache/pncp_complementos.json
           key: pncp-snapshot-${{ github.run_id }}
 
-      - name: Validar resultado do snapshot
-        if: steps.snapshot.outcome != 'success'
+      - name: Resumo da pre-coleta
+        if: always()
         run: |
-          echo "A pre-coleta do PNCP nao concluiu 4/4 recortes."
-          echo "O cache preservado ainda podera ser usado se estiver dentro do limite de 24 horas."
-          exit 1
+          echo "A pre-coleta e cumulativa: resultados validos sao preservados."
+          echo "As rodadas seguintes tentam somente os recortes que ainda estiverem faltando."
+          echo "A rotina das 08h faz a validacao final e bloqueia o e-mail se nao houver dados suficientes."
