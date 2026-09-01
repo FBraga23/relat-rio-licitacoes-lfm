@@ -1,17 +1,6 @@
-name: Relatorio Diario - 08h
+name: Relatorio Diario - 08h07
 
 on:
-  schedule:
-    - cron: "7 8 * * 1-5"
-      timezone: "America/Sao_Paulo"
-    - cron: "22 8 * * 1-5"
-      timezone: "America/Sao_Paulo"
-    - cron: "37 8 * * 1-5"
-      timezone: "America/Sao_Paulo"
-    - cron: "52 8 * * 1-5"
-      timezone: "America/Sao_Paulo"
-    - cron: "7 9 * * 1-5"
-      timezone: "America/Sao_Paulo"
   workflow_dispatch:
     inputs:
       sem_email:
@@ -66,13 +55,29 @@ jobs:
           restore-keys: |
             pncp-snapshot-
 
+      - name: Restaurar cache operacional mais recente
+        id: restore-base
+        uses: actions/cache/restore@v5
+        with:
+          path: cache/dados_operacionais.json
+          key: dados-operacionais-report-${{ github.run_id }}
+          restore-keys: |
+            dados-operacionais-
+
       - name: Gerar relatorio sem enviar e-mail
-        if: github.event_name == 'workflow_dispatch' && inputs.sem_email == true
+        if: inputs.sem_email == true
         run: python run_daily.py --sem-email
 
       - name: Gerar e enviar relatorio
-        if: github.event_name != 'workflow_dispatch' || inputs.sem_email != true
+        if: inputs.sem_email != true
         run: python run_daily.py
+
+      - name: Salvar cache operacional atualizado
+        if: always() && hashFiles('cache/dados_operacionais.json') != ''
+        uses: actions/cache/save@v5
+        with:
+          path: cache/dados_operacionais.json
+          key: dados-operacionais-${{ github.run_id }}
 
       - name: Guardar PDF e logs para diagnostico
         if: always()
